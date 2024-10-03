@@ -203,6 +203,33 @@ train_data = data[:int(0.8*len(data))]
 val_data = data[int(0.8*len(data)):int(0.9*len(data))]
 test_data = data[int(0.9*len(data)):]
 
+
+
+
+#select columns 2-13 and 17 for input
+
+inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18]
+input = train_data[:, inputColumns] 
+target = train_data[:,16]
+inputVal = val_data[:, inputColumns]
+targetVal = val_data[:,16]
+# define the keras model
+model = Sequential()
+model.add(Dense(500, input_shape=(13,), activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+# compile the keras model
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# fit the keras model on the dataset
+model.fit(input, target, epochs=500, batch_size=1000)
+# evaluate the keras model
+_, accuracy = model.evaluate(input, target)
+print('Accuracy: %.2f' % (accuracy*100))
+
+_, accuracyVal = model.evaluate(inputVal, targetVal)
+print('Accuracy: %.2f' % (accuracyVal*100))
+
+
+
 print(lineCount(train_data)+lineCount(val_data)+lineCount(test_data))   
 
 
