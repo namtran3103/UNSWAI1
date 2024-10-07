@@ -4,6 +4,21 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 from keras.optimizers import SGD
+from sklearn.metrics import confusion_matrix, balanced_accuracy_score, precision_score
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+import sklearn
+import pandas as pd
+import keras
+from keras.models import Sequential
+from keras.layers import Dense
+import tensorflow as tf
+from sklearn.metrics import confusion_matrix,ConfusionMatrixDisplay
+from sklearn.preprocessing import MinMaxScaler
+
+import seaborn as sns
 
 import csv
 
@@ -152,7 +167,40 @@ def removeOutliers(data, excludedColumns):
     data = np.delete(data, outliersIndices, axis=0)
     return data
 
+def plot_accuracy(result):
+    # Extract accuracy and validation accuracy from the history object
+    accuracy = result.history['accuracy']
+    val_accuracy = result.history['val_accuracy']
+    epochs = range(1, len(accuracy) + 1)
+    
+    # Plot the accuracy
+    plt.plot(epochs, accuracy, 'bo', label='Training accuracy')
+    plt.plot(epochs, val_accuracy, 'ro', label='Validation accuracy')
+    plt.title('Training and validation accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    #plt.ylim(0, 1) 
+    plt.legend()
+    plt.show()
+    
+    
+def plot_confusion_matrix(y_true, y_pred, class_names):
+    cm = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title('Confusion Matrix')
+    plt.show()
 
+def evaluate_performance(y_true, y_pred):
+    balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, pos_label=1)  # Assuming '1' is the positive class
+
+    print(f"Balanced Accuracy: {balanced_accuracy}")
+    print(f"Precision: {precision}")
+    print("Balanced Accuracy: ", balanced_accuracy)
+    print("Precision: ", precision)
 
 with open('Climate_SPI.csv', newline='') as csvfile:
     data = list(csv.reader(csvfile))
@@ -199,9 +247,9 @@ print(lineCount(data))
 
 
 
-train_data = data[:int(0.8*len(data))]
-val_data = data[int(0.8*len(data)):int(0.9*len(data))]
-test_data = data[int(0.9*len(data)):]
+train_data = data[:int(0.7*len(data))]
+val_data = data[int(0.7*len(data)):int(0.85*len(data))]
+test_data = data[int(0.85*len(data)):]
 
 
 
@@ -209,18 +257,73 @@ test_data = data[int(0.9*len(data)):]
 #select columns 2-13 and 17 for input
 
 inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18]
+#inputColumns = [2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
 input = train_data[:, inputColumns] 
 target = train_data[:,16]
 inputVal = val_data[:, inputColumns]
 targetVal = val_data[:,16]
+inputTest = test_data[:, inputColumns]
+targetTest = test_data[:,16]
+
+scaler1 = MinMaxScaler()
+scaler1.fit(input)
+t_input = scaler1.transform(input)
+scaler2 = MinMaxScaler()
+scaler2.fit(inputVal)
+t_inputVal = scaler2.transform(inputVal)
+scaler3 = MinMaxScaler()
+scaler3.fit(inputTest)
+t_inputTest = scaler3.transform(inputTest)
+
+basic_model = Sequential()
+basic_model.add(Dense(units=16, activation='relu', input_shape=(13,)))
+basic_model.add(Dense(1, activation='sigmoid'))
+
+adam = keras.optimizers.Adam(learning_rate=0.001)
+basic_model.compile(loss='binary_crossentropy', optimizer=adam, metrics=["accuracy"])
+
+result = basic_model.fit(t_input, target, epochs=150, batch_size=30, validation_data=(t_inputVal, targetVal))
+
+
+
+plot_accuracy(result)
+
+predicted = basic_model.predict(t_inputTest)
+#predicted = tf.squeeze(predicted)
+#predicted = np.array([1 if x >= 0.5 else 0 for x in predicted])
+#actual = np.array(targetTest)
+#conf_mat = confusion_matrix(actual, predicted)
+#displ = ConfusionMatrixDisplay(confusion_matrix=conf_mat)
+#displ.plot()
+
+
+
+#print(y_pred)
+#print(y_test)
+
+y_pred = (predicted >= 0.5).astype("int32")  # Adjust this line if your model outputs class labels directly
+
+# Evaluate the performance
+#evaluate_performance(y_test, y_pred)
+
+# Compute and plot the confusion matrix
+class_names = ['No Drought', 'Drought']  # Adjust class names as needed
+plot_confusion_matrix(targetTest, y_pred, class_names)
+
+
+#evaluate_performance(y_test, y_pred)
+
+
+'''
 # define the keras model
 model = Sequential()
 model.add(Dense(500, input_shape=(13,), activation='relu'))
+model.add(Dense(100, activation='relu'))
 model.add(Dense(1, activation='sigmoid'))
 # compile the keras model
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 # fit the keras model on the dataset
-model.fit(input, target, epochs=500, batch_size=1000)
+result = model.fit(input, target, epochs=250, batch_size=100, validation_data=(inputVal, targetVal))
 # evaluate the keras model
 _, accuracy = model.evaluate(input, target)
 print('Accuracy: %.2f' % (accuracy*100))
@@ -228,11 +331,40 @@ print('Accuracy: %.2f' % (accuracy*100))
 _, accuracyVal = model.evaluate(inputVal, targetVal)
 print('Accuracy: %.2f' % (accuracyVal*100))
 
+#Plot of the accuracy (y-axis) versus the number of epochs (x-axis) for both the training and validation sets
 
 
-print(lineCount(train_data)+lineCount(val_data)+lineCount(test_data))   
 
 
+
+test_input = test_data[:, inputColumns]
+
+#Performance metrics “Balanced Accuracy” and “Precision” calculated on the test set.
+
+# Predict the class on the test set
+y_pred = model.predict(test_input)
+y_test = test_data[:, 16]
+
+#print(y_pred)
+#print(y_test)
+y_pred = (y_pred > 0.5).astype("int32")  # Adjust this line if your model outputs class labels directly
+
+# Evaluate the performance
+#evaluate_performance(y_test, y_pred)
+
+# Compute and plot the confusion matrix
+class_names = ['No Drought', 'Drought']  # Adjust class names as needed
+plot_confusion_matrix(y_test, y_pred, class_names)
+
+
+evaluate_performance(y_test, y_pred)
+
+plot_accuracy(result)
+
+
+#print(lineCount(train_data)+lineCount(val_data)+lineCount(test_data))   
+
+'''
 
 #print row of each
 #print(train_data[0])
