@@ -105,6 +105,9 @@ def normaliseMonth(dataSet):
         new_dataSet.append(x)
     return np.array(new_dataSet)
 
+#Data [['year', 'month', 'u10', 'v10', 'mx2t', 'mn2t', 'tcc', 't2', 'msl', 't', 'q', 'u', 'v', 'z', 'SPI', 'grid_ID','Drought', 'monthCos', 'monthSin'],...]
+variables = ['year', 'month', 'u10', 'v10', 'mx2t', 'mn2t', 'tcc', 't2', 'msl', 't', 'q', 'u', 'v', 'z', 'SPI', 'grid_ID','Drought', 'monthCos', 'monthSin']
+
 def noIncludeInfinites(data):
     new_data = []
     detected = False
@@ -214,6 +217,12 @@ def evaluate_performance(y_true, y_pred):
     print("Balanced Accuracy: ", balanced_accuracy)
     print("Precision: ", precision)
 
+def printPredictorsSet(variables, indices):
+    usedPredictors = []
+    for x in indices:
+        usedPredictors.append(variables[x])
+    print("Used predictors: ", usedPredictors)
+
 with open('Climate_SPI_Init.csv', newline='') as csvfile:
     initData = list(csv.reader(csvfile))
 
@@ -247,6 +256,8 @@ print(initData[999])
 initData = filterInvalidMonthsNP(initData)
 initData = noIncludeInfinites(initData)
 initData = normaliseMonth(initData)
+
+
 
 
 #np.random.shuffle(data)
@@ -308,7 +319,9 @@ inputTest = dataInputNormalized[int(0.85*len(initData)):]
 targetTest = dataTargetClassification[int(0.85*len(initData)):]
 
 basic_model = Sequential()
-basic_model.add(Dense(units=16, activation='relu', input_shape=(13,)))
+#basic_model.add(Dense(units=16, activation='relu', input_shape=(13,)))
+basic_model.add(Dense(units=600, activation='relu', input_shape=(13,)))
+
 basic_model.add(Dense(1, activation='sigmoid'))
 
 adam = keras.optimizers.Adam(learning_rate=0.001)
@@ -358,9 +371,9 @@ print("Balanced Accuracy: ", balanced_accuracy_score(targetTest, y_pred))
 print("Precision: ", precision_score(targetTest, y_pred, pos_label=1))
 #evaluate_performance(y_test, y_pred)
 
-#basic_model.save("classification.keras")
+#basic_model.save("classification3.keras")
 
-classificationModel = keras.models.load_model("classification.keras")
+classificationModel = keras.models.load_model("classification3.keras")
 
 with open('Climate_SPI.csv', newline='') as csvfile:
     data = list(csv.reader(csvfile))
@@ -418,6 +431,9 @@ plotSimpleConfusionMatrix(dataTargetClassification, nClassificationPredBin)
 print("Balanced Accuracy: ", balanced_accuracy_score(dataTargetClassification, nClassificationPredBin))
 print("Precision: ", precision_score(dataTargetClassification, nClassificationPredBin, pos_label=1))
 
+#Print the number of samples and your model’s predictors set.
+print("Number of samples: ", len(data))
+printPredictorsSet(variables, inputColumns)
 
 
 '''
