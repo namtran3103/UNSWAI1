@@ -6,6 +6,8 @@ from keras.optimizers import Adam
 from keras.optimizers import SGD
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score, precision_score
 
+from sklearn import metrics
+
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
@@ -183,6 +185,11 @@ def plot_accuracy(result):
     plt.legend()
     plt.show()
     
+def plotSimpleConfusionMatrix(target, predicted):
+    confusion_matrix = metrics.confusion_matrix(target, predicted)
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix = confusion_matrix, display_labels = ["No Drought", "Drought"])
+    cm_display.plot()
+    plt.show()     
     
 def plot_confusion_matrix(y_true, y_pred, class_names):
     cm = confusion_matrix(y_true, y_pred)
@@ -308,8 +315,8 @@ y_pred = (predicted >= 0.5).astype("int32")  # Adjust this line if your model ou
 
 # Compute and plot the confusion matrix
 class_names = ['No Drought', 'Drought']  # Adjust class names as needed
-plot_confusion_matrix(targetTest, y_pred, class_names)
-
+#plot_confusion_matrix(targetTest, y_pred, class_names)
+plotSimpleConfusionMatrix(targetTest, y_pred)
 
 #evaluate_performance(y_test, y_pred)
 
