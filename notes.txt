@@ -2,6 +2,12 @@ https://machinelearningmastery.com/tutorial-first-neural-network-python-keras/
 https://machinelearningmastery.com/display-deep-learning-model-training-history-in-keras/
 https://www.freecodecamp.org/news/binary-classification-made-simple-with-tensorflow/
 https://www.pluralsight.com/resources/blog/guides/regression-keras
+https://learnopencv.com/tensorflow-keras-tutorial-linear-regression/
+https://www.w3schools.com/python/python_ml_confusion_matrix.asp
+https://keras.io/api/layers/activations/
+https://www.dlology.com/blog/quick-notes-on-how-to-choose-optimizer-in-keras/
+https://stackoverflow.com/questions/44747343/keras-input-explanation-input-shape-units-batch-size-dim-etc
 
+anderen threshold probieren
 specific humidity, both temps, total cloud dover, wind components
 

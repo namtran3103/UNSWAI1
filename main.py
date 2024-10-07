@@ -1,5 +1,5 @@
 #Hoang-Nam Tran, z5629534
-
+#change binary threshold maybe???
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.models import Sequential
