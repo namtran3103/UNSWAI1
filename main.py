@@ -6,7 +6,7 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 from keras.optimizers import SGD
-from sklearn.metrics import confusion_matrix, balanced_accuracy_score, precision_score
+from sklearn.metrics import confusion_matrix, balanced_accuracy_score, precision_score, mean_absolute_error
 from keras import ops
 
 import random
@@ -23,6 +23,8 @@ from keras.layers import Dense
 import tensorflow as tf
 from sklearn.metrics import confusion_matrix,ConfusionMatrixDisplay
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.feature_selection import r_regression
+
 
 import seaborn as sns
 
@@ -44,7 +46,7 @@ import csv
 #forbidden indices: SPI, Drought, year, grid_ID -> 14, 15, 0, 16
 
 forbiddenColumns = [0, 14, 15, 16]
-seed = 42
+seed = 60
 
 def drought(data):
     for x in data:
@@ -77,7 +79,7 @@ def checkNonFloatNonNP(data):
             try:
                 float(y)
             except:
-                print(y)
+                #print(y)
                 data.remove(x)
                 break
 
@@ -192,7 +194,30 @@ def plot_accuracy(result):
     #plt.ylim(0, 1) 
     plt.legend()
     plt.show()
+
+def plot_loss(result):
+    # Extract loss and validation loss from the history object
+    loss = result.history['loss']
+    val_loss = result.history['val_loss']
+    epochs = range(1, len(loss) + 1)
     
+    # Plot the loss
+    plt.plot(epochs, loss, 'bo', label='Training loss')
+    plt.plot(epochs, val_loss, 'ro', label='Validation loss')
+    plt.title('Training and validation loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.show()
+
+def scatterPlot(target, predicted):
+    plt.scatter(target, predicted)
+    plt.xlabel('True Values')
+    plt.ylabel('Predictions')
+    plt.title('SPI vs Predicted SPI')
+    plt.show()
+    
+
 def plotSimpleConfusionMatrix(target, predicted):
     confusion_matrix = metrics.confusion_matrix(target, predicted)
     cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix = confusion_matrix, display_labels = ["No Drought", "Drought"])
@@ -318,29 +343,48 @@ targetVal = dataTargetClassification[int(0.7*len(initData)):int(0.85*len(initDat
 inputTest = dataInputNormalized[int(0.85*len(initData)):]
 targetTest = dataTargetClassification[int(0.85*len(initData)):]
 
-basic_model = Sequential()
-#basic_model.add(Dense(units=16, activation='relu', input_shape=(13,)))
-basic_model.add(Dense(units=600, activation='relu', input_shape=(13,)))
+targetRegression = dataTargetRegression[:int(0.7*len(initData))]
+targetValRegression = dataTargetRegression[int(0.7*len(initData)):int(0.85*len(initData))]
+targetTestRegression = dataTargetRegression[int(0.85*len(initData)):]
 
-basic_model.add(Dense(1, activation='sigmoid'))
+
+
+initClassModel = Sequential()
+#basic_model.add(Dense(units=16, activation='relu', input_shape=(13,)))
+initClassModel.add(Dense(units=600, activation='relu', input_shape=(13,)))
+
+initClassModel.add(Dense(1, activation='sigmoid'))
 
 adam = keras.optimizers.Adam(learning_rate=0.001)
-basic_model.compile(loss='binary_crossentropy', optimizer=adam, metrics=["accuracy"])
+initClassModel.compile(loss='binary_crossentropy', optimizer=adam, metrics=["accuracy"])
 
-result = basic_model.fit(input, target, epochs=150, batch_size=30, validation_data=(inputVal, targetVal))
+result = initClassModel.fit(input, target, epochs=170, batch_size=30, validation_data=(inputVal, targetVal))
 
 
+
+adamReg = keras.optimizers.Adam(learning_rate=0.001)
+regressionModel = Sequential()
+#regressionModel.add(Dense(450, activation='relu', input_dim=13))
+#regressionModel.add(Dense(90, activation= "relu"))
+#regressionModel.add(Dense(45, activation= "relu"))
+regressionModel.add(Dense(units=600, activation= "relu", input_dim=13))
+regressionModel.add(Dense(1))
+regressionModel.compile(loss='mean_squared_error', optimizer=adamReg, metrics=["mean_squared_error"])
+resultRegression = regressionModel.fit(input, targetRegression, epochs=220, batch_size=30, validation_data=(inputVal, targetValRegression))
 
 plot_accuracy(result)
 
-predicted = basic_model.predict(inputTest)
+#testModelClassification = keras.models.load_model("classification3.keras")
+#testModelClassification.summary()
+
+#predicted = testModelClassification.predict(inputTest)
+predicted = initClassModel.predict(inputTest)
 #predicted = tf.squeeze(predicted)
 #predicted = np.array([1 if x >= 0.5 else 0 for x in predicted])
 #actual = np.array(targetTest)
 #conf_mat = confusion_matrix(actual, predicted)
 #displ = ConfusionMatrixDisplay(confusion_matrix=conf_mat)
 #displ.plot()
-
 
 
 #print(y_pred)
@@ -352,7 +396,7 @@ y_pred = (predicted >= 0.5).astype("int32")  # Adjust this line if your model ou
 #evaluate_performance(y_test, y_pred)
 
 # Compute and plot the confusion matrix
-class_names = ['No Drought', 'Drought']  # Adjust class names as needed
+#class_names = ['No Drought', 'Drought']  # Adjust class names as needed
 
 countRealDrought = 0
 for x in targetTest:
@@ -369,11 +413,23 @@ print(countPredictedDrought)
 plotSimpleConfusionMatrix(targetTest, y_pred)
 print("Balanced Accuracy: ", balanced_accuracy_score(targetTest, y_pred))
 print("Precision: ", precision_score(targetTest, y_pred, pos_label=1))
+
+
+plot_loss(resultRegression)
+predictedRegression = regressionModel.predict(inputTest)
+scatterPlot(targetTestRegression, predictedRegression)
+print("Mean Absolute Error: ", mean_absolute_error(targetTestRegression, predictedRegression))
+print("Pearson Correlation Coefficient: ", r_regression(predictedRegression, targetTestRegression))
+
 #evaluate_performance(y_test, y_pred)
 
-#basic_model.save("classification3.keras")
+#initClassModel.save("classification4.keras")
 
 classificationModel = keras.models.load_model("classification3.keras")
+
+#regressionModel.save("regression.keras")
+
+regressionModelLoaded = keras.models.load_model("regression.keras")
 
 with open('Climate_SPI.csv', newline='') as csvfile:
     data = list(csv.reader(csvfile))
@@ -435,6 +491,12 @@ print("Precision: ", precision_score(dataTargetClassification, nClassificationPr
 print("Number of samples: ", len(data))
 printPredictorsSet(variables, inputColumns)
 
+nRegressionPredicted = regressionModelLoaded.predict(dataInputNormalized)
+scatterPlot(dataTargetRegression, nRegressionPredicted)
+print("Mean Absolute Error: ", mean_absolute_error(dataTargetRegression, nRegressionPredicted))
+print("Pearson Correlation Coefficient: ", r_regression(nRegressionPredicted, dataTargetRegression))
+print("Number of samples: ", len(data))
+printPredictorsSet(variables, inputColumns)
 
 '''
 # define the keras model

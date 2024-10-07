@@ -1,6 +1,7 @@
 https://machinelearningmastery.com/tutorial-first-neural-network-python-keras/
 https://machinelearningmastery.com/display-deep-learning-model-training-history-in-keras/
 https://www.freecodecamp.org/news/binary-classification-made-simple-with-tensorflow/
+https://www.pluralsight.com/resources/blog/guides/regression-keras
 
 specific humidity, both temps, total cloud dover, wind components
 
