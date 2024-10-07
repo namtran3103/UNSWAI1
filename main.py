@@ -1,3 +1,5 @@
+#Hoang-Nam Tran, z5629534
+
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.models import Sequential
@@ -5,7 +7,9 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 from keras.optimizers import SGD
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score, precision_score
+from keras import ops
 
+import random
 from sklearn import metrics
 
 import numpy as np
@@ -40,6 +44,7 @@ import csv
 #forbidden indices: SPI, Drought, year, grid_ID -> 14, 15, 0, 16
 
 forbiddenColumns = [0, 14, 15, 16]
+seed = 42
 
 def drought(data):
     for x in data:
@@ -209,21 +214,22 @@ def evaluate_performance(y_true, y_pred):
     print("Balanced Accuracy: ", balanced_accuracy)
     print("Precision: ", precision)
 
-with open('Climate_SPI.csv', newline='') as csvfile:
-    data = list(csv.reader(csvfile))
+with open('Climate_SPI_Init.csv', newline='') as csvfile:
+    initData = list(csv.reader(csvfile))
 
-data = drought(data)
-print(data[0])
-print(lineCount(data))
-checkNonFloatNonNP(data)
-print(lineCount(data))
+initData = drought(initData)
+
+checkNonFloatNonNP(initData)
+
+random.Random(seed).shuffle(initData)
+
 #np array of data
-data = np.array(data)
+initData = np.array(initData)
 #preprossing 1, get rid of rows that contain empty values or non numeric values
 
 #data = check_np_empty_nonNum_values(data)
-print(lineCount(data))
-data = data.astype(float)
+
+initData = initData.astype(float)
 #(b) Split your data into training, validation and test sets.
 #split data into 80% training, 10% validation and 10% test, shuffle data
 
@@ -234,37 +240,49 @@ data = data.astype(float)
 
 
 
-data = removeOutliers(data, forbiddenColumns)
+initData = removeOutliers(initData, forbiddenColumns)
 
-print(lineCount(data))
-print(data[999])
-data = filterInvalidMonthsNP(data)
-data = noIncludeInfinites(data)
-data = normaliseMonth(data)
-print(lineCount(data))
-print(data[999])
+
+print(initData[999])
+initData = filterInvalidMonthsNP(initData)
+initData = noIncludeInfinites(initData)
+initData = normaliseMonth(initData)
+
 
 #np.random.shuffle(data)
 
 
 
 
-data = filterInvalidMonthsNP(data)
-print(lineCount(data))
+initData = filterInvalidMonthsNP(initData)
+
+inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18]
+#inputColumns = [2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
+
+
+dataInput = initData[:, inputColumns]
+dataTargetClassification = initData[:, 16]
+dataTargetRegression = initData[:, 14]
+scaler = MinMaxScaler()
+scaler.fit(dataInput)
+dataInputNormalized = scaler.transform(dataInput)
 
 
 
+'''
 train_data = data[:int(0.7*len(data))]
 val_data = data[int(0.7*len(data)):int(0.85*len(data))]
 test_data = data[int(0.85*len(data)):]
-
+'''
 
 
 
 #select columns 2-13 and 17 for input
 
-inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18]
-#inputColumns = [2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
+
+
+
+'''
 input = train_data[:, inputColumns] 
 target = train_data[:,16]
 inputVal = val_data[:, inputColumns]
@@ -281,6 +299,13 @@ t_inputVal = scaler2.transform(inputVal)
 scaler3 = MinMaxScaler()
 scaler3.fit(inputTest)
 t_inputTest = scaler3.transform(inputTest)
+'''
+input = dataInputNormalized[:int(0.7*len(initData))]
+target = dataTargetClassification[:int(0.7*len(initData))]
+inputVal = dataInputNormalized[int(0.7*len(initData)):int(0.85*len(initData))]
+targetVal = dataTargetClassification[int(0.7*len(initData)):int(0.85*len(initData))]
+inputTest = dataInputNormalized[int(0.85*len(initData)):]
+targetTest = dataTargetClassification[int(0.85*len(initData)):]
 
 basic_model = Sequential()
 basic_model.add(Dense(units=16, activation='relu', input_shape=(13,)))
@@ -289,13 +314,13 @@ basic_model.add(Dense(1, activation='sigmoid'))
 adam = keras.optimizers.Adam(learning_rate=0.001)
 basic_model.compile(loss='binary_crossentropy', optimizer=adam, metrics=["accuracy"])
 
-result = basic_model.fit(t_input, target, epochs=150, batch_size=30, validation_data=(t_inputVal, targetVal))
+result = basic_model.fit(input, target, epochs=150, batch_size=30, validation_data=(inputVal, targetVal))
 
 
 
 plot_accuracy(result)
 
-predicted = basic_model.predict(t_inputTest)
+predicted = basic_model.predict(inputTest)
 #predicted = tf.squeeze(predicted)
 #predicted = np.array([1 if x >= 0.5 else 0 for x in predicted])
 #actual = np.array(targetTest)
@@ -315,10 +340,84 @@ y_pred = (predicted >= 0.5).astype("int32")  # Adjust this line if your model ou
 
 # Compute and plot the confusion matrix
 class_names = ['No Drought', 'Drought']  # Adjust class names as needed
-#plot_confusion_matrix(targetTest, y_pred, class_names)
-plotSimpleConfusionMatrix(targetTest, y_pred)
 
+countRealDrought = 0
+for x in targetTest:
+    if x == 1:
+        countRealDrought += 1
+print(countRealDrought)
+
+countPredictedDrought = 0
+for x in y_pred:
+    if x == 1:
+        countPredictedDrought += 1
+print(countPredictedDrought)
+
+plotSimpleConfusionMatrix(targetTest, y_pred)
+print("Balanced Accuracy: ", balanced_accuracy_score(targetTest, y_pred))
+print("Precision: ", precision_score(targetTest, y_pred, pos_label=1))
 #evaluate_performance(y_test, y_pred)
+
+#basic_model.save("classification.keras")
+
+classificationModel = keras.models.load_model("classification.keras")
+
+with open('Climate_SPI.csv', newline='') as csvfile:
+    data = list(csv.reader(csvfile))
+
+data = drought(data)
+
+checkNonFloatNonNP(data)
+
+random.Random(seed).shuffle(data)
+
+data = np.array(data)
+
+
+data = data.astype(float)
+
+
+data = removeOutliers(data, forbiddenColumns)
+data = filterInvalidMonthsNP(data)
+data = noIncludeInfinites(data)
+data = normaliseMonth(data)
+data = filterInvalidMonthsNP(data)
+
+inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18]
+#inputColumns = [2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
+
+
+dataInput = data[:, inputColumns]
+dataTargetClassification = data[:, 16]
+dataTargetRegression = data[:, 14]
+scaler = MinMaxScaler()
+scaler.fit(dataInput)
+dataInputNormalized = scaler.transform(dataInput)
+
+
+nClassificationPredicted = classificationModel.predict(dataInputNormalized)
+
+
+nClassificationPredBin = (nClassificationPredicted >= 0.5).astype("int32")  # Adjust this line if your model outputs class labels directly
+
+
+
+countRealDroughtClassification = 0
+for x in dataTargetClassification:
+    if x == 1:
+        countRealDroughtClassification += 1
+print(countRealDroughtClassification)
+
+countPredictedDroughtClassification = 0
+for x in nClassificationPredBin:
+    if x == 1:
+        countPredictedDroughtClassification += 1
+print(countPredictedDroughtClassification)
+
+plotSimpleConfusionMatrix(dataTargetClassification, nClassificationPredBin)
+print("Balanced Accuracy: ", balanced_accuracy_score(dataTargetClassification, nClassificationPredBin))
+print("Precision: ", precision_score(dataTargetClassification, nClassificationPredBin, pos_label=1))
+
 
 
 '''
