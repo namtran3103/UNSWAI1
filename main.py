@@ -46,7 +46,9 @@ import csv
 #forbidden indices: SPI, Drought, year, grid_ID -> 14, 15, 0, 16
 
 forbiddenColumns = [0, 14, 15, 16]
-seed = 60
+seed = 42
+keras.utils.set_random_seed(42)
+
 
 def drought(data):
     for x in data:
@@ -358,7 +360,7 @@ initClassModel.add(Dense(1, activation='sigmoid'))
 adam = keras.optimizers.Adam(learning_rate=0.001)
 initClassModel.compile(loss='binary_crossentropy', optimizer=adam, metrics=["accuracy"])
 
-result = initClassModel.fit(input, target, epochs=170, batch_size=30, validation_data=(inputVal, targetVal))
+result = initClassModel.fit(input, target, epochs=150, batch_size=30, validation_data=(inputVal, targetVal))
 
 
 
@@ -423,7 +425,7 @@ print("Pearson Correlation Coefficient: ", r_regression(predictedRegression, tar
 
 #evaluate_performance(y_test, y_pred)
 
-#initClassModel.save("classification4.keras")
+initClassModel.save("classification4.keras")
 
 classificationModel = keras.models.load_model("classification3.keras")
 
