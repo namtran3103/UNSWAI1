@@ -45,6 +45,8 @@ import csv
 #Data [['year', 'month', 'u10', 'v10', 'mx2t', 'mn2t', 'tcc', 't2', 'msl', 't', 'q', 'u', 'v', 'z', 'SPI', 'grid_ID','Drought'],...]
 #forbidden indices: SPI, Drought, year, grid_ID -> 14, 15, 0, 16
 
+#
+
 forbiddenColumns = [0, 14, 15, 16]
 seed = 42
 keras.utils.set_random_seed(42)
@@ -188,8 +190,8 @@ def plot_accuracy(result):
     epochs = range(1, len(accuracy) + 1)
     
     # Plot the accuracy
-    plt.plot(epochs, accuracy, 'bo', label='Training accuracy')
-    plt.plot(epochs, val_accuracy, 'ro', label='Validation accuracy')
+    plt.plot(epochs, accuracy, 'b', label='Training accuracy')
+    plt.plot(epochs, val_accuracy, 'r', label='Validation accuracy')
     plt.title('Training and validation accuracy')
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
@@ -204,8 +206,8 @@ def plot_loss(result):
     epochs = range(1, len(loss) + 1)
     
     # Plot the loss
-    plt.plot(epochs, loss, 'bo', label='Training loss')
-    plt.plot(epochs, val_loss, 'ro', label='Validation loss')
+    plt.plot(epochs, loss, 'b', label='Training loss')
+    plt.plot(epochs, val_loss, 'r', label='Validation loss')
     plt.title('Training and validation loss')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
@@ -249,6 +251,9 @@ def printPredictorsSet(variables, indices):
     for x in indices:
         usedPredictors.append(variables[x])
     print("Used predictors: ", usedPredictors)
+
+
+
 
 with open('Climate_SPI_Init.csv', newline='') as csvfile:
     initData = list(csv.reader(csvfile))
@@ -294,9 +299,11 @@ initData = normaliseMonth(initData)
 
 initData = filterInvalidMonthsNP(initData)
 
-inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18]
+#inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18]
+#inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18]
 #inputColumns = [2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
 
+inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 18]
 
 dataInput = initData[:, inputColumns]
 dataTargetClassification = initData[:, 16]
@@ -353,14 +360,14 @@ targetTestRegression = dataTargetRegression[int(0.85*len(initData)):]
 
 initClassModel = Sequential()
 #basic_model.add(Dense(units=16, activation='relu', input_shape=(13,)))
-initClassModel.add(Dense(units=600, activation='relu', input_shape=(13,)))
+initClassModel.add(Dense(200, activation='relu', input_dim=14))
 
 initClassModel.add(Dense(1, activation='sigmoid'))
 
 adam = keras.optimizers.Adam(learning_rate=0.001)
 initClassModel.compile(loss='binary_crossentropy', optimizer=adam, metrics=["accuracy"])
 
-result = initClassModel.fit(input, target, epochs=150, batch_size=30, validation_data=(inputVal, targetVal))
+result = initClassModel.fit(input, target, epochs=200, batch_size=30, validation_data=(inputVal, targetVal)) #used 150
 
 
 
@@ -369,10 +376,11 @@ regressionModel = Sequential()
 #regressionModel.add(Dense(450, activation='relu', input_dim=13))
 #regressionModel.add(Dense(90, activation= "relu"))
 #regressionModel.add(Dense(45, activation= "relu"))
-regressionModel.add(Dense(units=600, activation= "relu", input_dim=13))
+regressionModel.add(Dense(200, activation= "relu", input_dim=14))
 regressionModel.add(Dense(1))
 regressionModel.compile(loss='mean_squared_error', optimizer=adamReg, metrics=["mean_squared_error"])
-resultRegression = regressionModel.fit(input, targetRegression, epochs=220, batch_size=30, validation_data=(inputVal, targetValRegression))
+resultRegression = regressionModel.fit(input, targetRegression, epochs=220,
+                                       batch_size=30, validation_data=(inputVal, targetValRegression)) #used 220
 
 plot_accuracy(result)
 
@@ -426,14 +434,18 @@ print("Pearson Correlation Coefficient: ", r_regression(predictedRegression, tar
 #evaluate_performance(y_test, y_pred)
 
 initClassModel.save("classification4.keras")
+regressionModel.save("regression.keras")
 
-classificationModel = keras.models.load_model("classification3.keras")
 
-#regressionModel.save("regression.keras")
+classificationModel = keras.models.load_model("classification4.keras")
+
+
 
 regressionModelLoaded = keras.models.load_model("regression.keras")
 
-with open('Climate_SPI.csv', newline='') as csvfile:
+
+#might need to change file name during discussion
+with open('Fake_Climate_SPI6.csv', newline='') as csvfile:
     data = list(csv.reader(csvfile))
 
 data = drought(data)
@@ -454,8 +466,7 @@ data = noIncludeInfinites(data)
 data = normaliseMonth(data)
 data = filterInvalidMonthsNP(data)
 
-inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18]
-#inputColumns = [2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
+
 
 
 dataInput = data[:, inputColumns]
