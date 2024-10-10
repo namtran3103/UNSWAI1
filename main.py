@@ -1,52 +1,26 @@
-#Hoang-Nam Tran, z5629534
-#change binary threshold maybe???
+# Hoang-Nam Tran, z5629534
 import numpy as np
 import matplotlib.pyplot as plt
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.optimizers import Adam
-from keras.optimizers import SGD
-from sklearn.metrics import confusion_matrix, balanced_accuracy_score, precision_score, mean_absolute_error
-from keras import ops
-
-import random
-from sklearn import metrics
-
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-import sklearn
-import pandas as pd
 import keras
 from keras.models import Sequential
 from keras.layers import Dense
-import tensorflow as tf
-from sklearn.metrics import confusion_matrix,ConfusionMatrixDisplay
+from sklearn import metrics
+from sklearn.metrics import balanced_accuracy_score, precision_score, mean_absolute_error
+import random
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.feature_selection import r_regression
-
-
-import seaborn as sns
-
 import csv
 
 
-#numpy stretching and slicing    
-    
-#print size of data[0]
-#Data [['year', 'month', 'u10', 'v10', 'mx2t', 'mn2t', 'tcc', 't2', 'msl', 't', 'q', 'u', 'v', 'z', 'SPI', 'grid_ID'],...]
-#print((data[0]))
+# Data structure before preprocessing
+# ['year', 'month', 'u10', 'v10', 'mx2t', 'mn2t', 'tcc', 't2', 'msl', 't', 'q', 'u', 'v', 'z', 'SPI', 'grid_ID']
 
-#a) SPI to Drought, SPI <=-1 is drought, SPI >-1 is no drought
-#modify data list by adding drought variable, später vll entfernen erste zeile data[0]
-#data[0].append('Drought')
-#get rid of first row
+# Data structure after preprocessing
+# ['year', 'month', 'u10', 'v10', 'mx2t', 'mn2t', 'tcc', 't2', 'msl', 't', 'q', 'u', 'v', 'z', 'SPI', 'grid_ID','Drought', 'monthCos', 'monthSin']
+variables = ['year', 'month', 'u10', 'v10', 'mx2t', 'mn2t', 'tcc', 't2', 'msl',
+             't', 'q', 'u', 'v', 'z', 'SPI', 'grid_ID', 'Drought', 'monthCos', 'monthSin']
 
-#Data [['year', 'month', 'u10', 'v10', 'mx2t', 'mn2t', 'tcc', 't2', 'msl', 't', 'q', 'u', 'v', 'z', 'SPI', 'grid_ID','Drought'],...]
-#forbidden indices: SPI, Drought, year, grid_ID -> 14, 15, 0, 16
-
-#
-
+# forbidden indices: year, SPI, grid_ID, Drought -> 0, 14, 15, 16
 forbiddenColumns = [0, 14, 15, 16]
 seed = 42
 keras.utils.set_random_seed(42)
@@ -63,37 +37,26 @@ def drought(data):
             x.append('Drought')
     return data
 
-'''
-def check_np_empty_nonNum_values(data):
-    for x in data:
-        for y in x:
-            try:
-                float(y)
-            except:
-                index = np.where(data == x)
-                #print the row
-                print(index)
-                data = np.delete(data, index, axis=0)
-                break
-    return data
-'''
+
 def checkNonFloatNonNP(data):
     for x in data:
         for y in x:
             try:
                 float(y)
             except:
-                #print(y)
+                # print(y)
                 data.remove(x)
                 break
 
+
 def filterInvalidMonthsNP(data):
     new_data = []
-    validMonths = [1,2,3,4,5,6,7,8,9,10,11,12]
+    validMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     for x in data:
         if x[1] in validMonths:
             new_data.append(x)
     return np.array(new_data)
+
 
 def lineCount(data):
     count = 0
@@ -101,18 +64,16 @@ def lineCount(data):
         count += 1
     return count
 
+
 def normaliseMonth(dataSet):
     new_dataSet = []
     for x in dataSet:
         month = x[1]
         month_normalised = 2 * np.pi * (month - 1) / 12
         x = np.append(x, [np.cos(month_normalised), np.sin(month_normalised)])
-        #new_dataSet.append(np.delete(x, 1))
         new_dataSet.append(x)
     return np.array(new_dataSet)
 
-#Data [['year', 'month', 'u10', 'v10', 'mx2t', 'mn2t', 'tcc', 't2', 'msl', 't', 'q', 'u', 'v', 'z', 'SPI', 'grid_ID','Drought', 'monthCos', 'monthSin'],...]
-variables = ['year', 'month', 'u10', 'v10', 'mx2t', 'mn2t', 'tcc', 't2', 'msl', 't', 'q', 'u', 'v', 'z', 'SPI', 'grid_ID','Drought', 'monthCos', 'monthSin']
 
 def noIncludeInfinites(data):
     new_data = []
@@ -126,38 +87,6 @@ def noIncludeInfinites(data):
             new_data.append(x)
     return np.array(new_data)
 
-def detect_outliers(data):    
-    # Calculate the mean and standard deviation for each column
-    mean = np.mean(data, axis=0)
-    std_dev = np.std(data, axis=0)
-    
-    
-    # Calculate the Z-score for each data point
-    z_scores = (data - mean) / std_dev
-    
-    # Identify outliers (Z-score > 3 or Z-score < -3)
-    outliers = np.abs(z_scores) > 3
-    #print(outliers)
-    
-    # Get the indices of the outliers
-    outlier_indices = np.where(outliers)
-    
-    #count how many outliers
-    count = 0
-    for x in outliers:
-        for y in x:
-            if y == True:
-                count += 1
-                break
-    print(count)
-    
-    county = 0
-    for x in outlier_indices[1]:
-        if x in forbiddenColumns:
-            county += 1
-    print(county)
-    print(count-county)
-    return outlier_indices
 
 def detectOutliersByColumn(data, column):
     mean = np.mean(data[:, column])
@@ -165,9 +94,8 @@ def detectOutliersByColumn(data, column):
     z_scores = (data[:, column] - mean) / std_dev
     outliers = np.abs(z_scores) > 3
     outlier_indices = np.where(outliers)
-    #count and print outlierindices
-    #print(len(outlier_indices[0]))
     return outlier_indices
+
 
 def removeOutliers(data, excludedColumns):
     outliersIndices = set()
@@ -179,40 +107,44 @@ def removeOutliers(data, excludedColumns):
 
     outliersIndices = list(outliersIndices)
     outliersIndices.sort()
-    #print(outliersIndices)
     data = np.delete(data, outliersIndices, axis=0)
     return data
+
 
 def plot_accuracy(result):
     # Extract accuracy and validation accuracy from the history object
     accuracy = result.history['accuracy']
     val_accuracy = result.history['val_accuracy']
     epochs = range(1, len(accuracy) + 1)
-    
+
     # Plot the accuracy
-    plt.plot(epochs, accuracy, 'b', label='Training accuracy')
-    plt.plot(epochs, val_accuracy, 'r', label='Validation accuracy')
+    # plt.plot(epochs, accuracy, 'b', label='Training accuracy')
+    # plt.plot(epochs, val_accuracy, 'r', label='Validation accuracy')
+    plt.plot(result.history['accuracy'], 'b', label='Training accuracy')
+    plt.plot(result.history['val_accuracy'], 'r', label='Validation accuracy')
     plt.title('Training and validation accuracy')
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
-    #plt.ylim(0, 1) 
+    #plt.ylim(0.8, 0.9)
     plt.legend()
     plt.show()
 
+
 def plot_loss(result):
-    # Extract loss and validation loss from the history object
     loss = result.history['loss']
     val_loss = result.history['val_loss']
     epochs = range(1, len(loss) + 1)
-    
-    # Plot the loss
-    plt.plot(epochs, loss, 'b', label='Training loss')
-    plt.plot(epochs, val_loss, 'r', label='Validation loss')
+
+    #plt.plot(epochs, loss, 'b', label='Training loss')
+    #plt.plot(epochs, val_loss, 'r', label='Validation loss')
+    plt.plot(result.history['loss'], 'b', label='Training loss')
+    plt.plot(result.history['val_loss'], 'r', label='Validation loss')
     plt.title('Training and validation loss')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
     plt.show()
+
 
 def scatterPlot(target, predicted):
     plt.scatter(target, predicted)
@@ -220,31 +152,15 @@ def scatterPlot(target, predicted):
     plt.ylabel('Predictions')
     plt.title('SPI vs Predicted SPI')
     plt.show()
-    
+
 
 def plotSimpleConfusionMatrix(target, predicted):
     confusion_matrix = metrics.confusion_matrix(target, predicted)
-    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix = confusion_matrix, display_labels = ["No Drought", "Drought"])
+    cm_display = metrics.ConfusionMatrixDisplay(
+        confusion_matrix=confusion_matrix, display_labels=["No Drought", "Drought"])
     cm_display.plot()
-    plt.show()     
-    
-def plot_confusion_matrix(y_true, y_pred, class_names):
-    cm = confusion_matrix(y_true, y_pred)
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    plt.title('Confusion Matrix')
     plt.show()
 
-def evaluate_performance(y_true, y_pred):
-    balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred, pos_label=1)  # Assuming '1' is the positive class
-
-    print(f"Balanced Accuracy: {balanced_accuracy}")
-    print(f"Precision: {precision}")
-    print("Balanced Accuracy: ", balanced_accuracy)
-    print("Precision: ", precision)
 
 def printPredictorsSet(variables, indices):
     usedPredictors = []
@@ -253,348 +169,149 @@ def printPredictorsSet(variables, indices):
     print("Used predictors: ", usedPredictors)
 
 
-
-
 with open('Climate_SPI_Init.csv', newline='') as csvfile:
     initData = list(csv.reader(csvfile))
 
 initData = drought(initData)
-
 checkNonFloatNonNP(initData)
-
 random.Random(seed).shuffle(initData)
 
-#np array of data
 initData = np.array(initData)
-#preprossing 1, get rid of rows that contain empty values or non numeric values
-
-#data = check_np_empty_nonNum_values(data)
-
 initData = initData.astype(float)
-#(b) Split your data into training, validation and test sets.
-#split data into 80% training, 10% validation and 10% test, shuffle data
-
-#np.random.shuffle(data)
-
-#outliers = detect_outliers(data)
-#print(outliers)
-
-
-
 initData = removeOutliers(initData, forbiddenColumns)
-
-
-print(initData[999])
 initData = filterInvalidMonthsNP(initData)
 initData = noIncludeInfinites(initData)
 initData = normaliseMonth(initData)
 
+# inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18]
+# inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18]
+# inputColumns = [2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
+#inputColumns = [4, 6, 7, 8, 10, 11, 12, 13]
 
-
-
-#np.random.shuffle(data)
-
-
-
-
-initData = filterInvalidMonthsNP(initData)
-
-#inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18]
-#inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18]
-#inputColumns = [2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
 
 inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 18]
 
 dataInput = initData[:, inputColumns]
 dataTargetClassification = initData[:, 16]
 dataTargetRegression = initData[:, 14]
+
 scaler = MinMaxScaler()
 scaler.fit(dataInput)
 dataInputNormalized = scaler.transform(dataInput)
+# dataInputNormalized = dataInput
 
-
-
-'''
-train_data = data[:int(0.7*len(data))]
-val_data = data[int(0.7*len(data)):int(0.85*len(data))]
-test_data = data[int(0.85*len(data)):]
-'''
-
-
-
-#select columns 2-13 and 17 for input
-
-
-
-
-'''
-input = train_data[:, inputColumns] 
-target = train_data[:,16]
-inputVal = val_data[:, inputColumns]
-targetVal = val_data[:,16]
-inputTest = test_data[:, inputColumns]
-targetTest = test_data[:,16]
-
-scaler1 = MinMaxScaler()
-scaler1.fit(input)
-t_input = scaler1.transform(input)
-scaler2 = MinMaxScaler()
-scaler2.fit(inputVal)
-t_inputVal = scaler2.transform(inputVal)
-scaler3 = MinMaxScaler()
-scaler3.fit(inputTest)
-t_inputTest = scaler3.transform(inputTest)
-'''
-input = dataInputNormalized[:int(0.7*len(initData))]
-target = dataTargetClassification[:int(0.7*len(initData))]
+inputTrain = dataInputNormalized[:int(0.7*len(initData))]
 inputVal = dataInputNormalized[int(0.7*len(initData)):int(0.85*len(initData))]
-targetVal = dataTargetClassification[int(0.7*len(initData)):int(0.85*len(initData))]
 inputTest = dataInputNormalized[int(0.85*len(initData)):]
-targetTest = dataTargetClassification[int(0.85*len(initData)):]
+
+targetTrainClass = dataTargetClassification[:int(0.7*len(initData))]
+targetValClass = dataTargetClassification[int(
+    0.7*len(initData)):int(0.85*len(initData))]
+targetTestClass = dataTargetClassification[int(0.85*len(initData)):]
 
 targetRegression = dataTargetRegression[:int(0.7*len(initData))]
-targetValRegression = dataTargetRegression[int(0.7*len(initData)):int(0.85*len(initData))]
+targetValRegression = dataTargetRegression[int(
+    0.7*len(initData)):int(0.85*len(initData))]
 targetTestRegression = dataTargetRegression[int(0.85*len(initData)):]
 
 
-
 initClassModel = Sequential()
-#basic_model.add(Dense(units=16, activation='relu', input_shape=(13,)))
-initClassModel.add(Dense(200, activation='relu', input_dim=14))
-
+# basic_model.add(Dense(units=16, activation='relu', input_shape=(13,)))
+initClassModel.add(Dense(50, activation='relu', input_dim=14))
 initClassModel.add(Dense(1, activation='sigmoid'))
 
 adam = keras.optimizers.Adam(learning_rate=0.001)
-initClassModel.compile(loss='binary_crossentropy', optimizer=adam, metrics=["accuracy"])
-
-result = initClassModel.fit(input, target, epochs=200, batch_size=30, validation_data=(inputVal, targetVal)) #used 150
-
+initClassModel.compile(loss='binary_crossentropy',
+                       optimizer=adam, metrics=["accuracy"])
+resultClass = initClassModel.fit(inputTrain, targetTrainClass, epochs=150, batch_size=32, validation_data=(
+    inputVal, targetValClass))  # used 150
 
 
 adamReg = keras.optimizers.Adam(learning_rate=0.001)
 regressionModel = Sequential()
-#regressionModel.add(Dense(450, activation='relu', input_dim=13))
-#regressionModel.add(Dense(90, activation= "relu"))
-#regressionModel.add(Dense(45, activation= "relu"))
-regressionModel.add(Dense(200, activation= "relu", input_dim=14))
+# regressionModel.add(Dense(450, activation='relu', input_dim=13))
+# regressionModel.add(Dense(90, activation= "relu"))
+# regressionModel.add(Dense(45, activation= "relu"))
+regressionModel.add(Dense(50, activation="relu", input_dim=14))
 regressionModel.add(Dense(1))
-regressionModel.compile(loss='mean_squared_error', optimizer=adamReg, metrics=["mean_squared_error"])
-resultRegression = regressionModel.fit(input, targetRegression, epochs=220,
-                                       batch_size=30, validation_data=(inputVal, targetValRegression)) #used 220
+regressionModel.compile(loss='mean_squared_error',
+                        optimizer=adamReg, metrics=["mean_squared_error"])
+resultRegression = regressionModel.fit(inputTrain, targetRegression, epochs=220,
+                                       # used 220
+                                       batch_size=32, validation_data=(inputVal, targetValRegression))
 
-plot_accuracy(result)
+plot_accuracy(resultClass)
 
-#testModelClassification = keras.models.load_model("classification3.keras")
-#testModelClassification.summary()
+predictedClass = initClassModel.predict(inputTest)
 
-#predicted = testModelClassification.predict(inputTest)
-predicted = initClassModel.predict(inputTest)
-#predicted = tf.squeeze(predicted)
-#predicted = np.array([1 if x >= 0.5 else 0 for x in predicted])
-#actual = np.array(targetTest)
-#conf_mat = confusion_matrix(actual, predicted)
-#displ = ConfusionMatrixDisplay(confusion_matrix=conf_mat)
-#displ.plot()
+# Adjust this line if your model outputs class labels directly
+predictedClassBinary = (predictedClass >= 0.5).astype("int32")
 
 
-#print(y_pred)
-#print(y_test)
-
-y_pred = (predicted >= 0.5).astype("int32")  # Adjust this line if your model outputs class labels directly
-
-# Evaluate the performance
-#evaluate_performance(y_test, y_pred)
-
-# Compute and plot the confusion matrix
-#class_names = ['No Drought', 'Drought']  # Adjust class names as needed
-
-countRealDrought = 0
-for x in targetTest:
-    if x == 1:
-        countRealDrought += 1
-print(countRealDrought)
-
-countPredictedDrought = 0
-for x in y_pred:
-    if x == 1:
-        countPredictedDrought += 1
-print(countPredictedDrought)
-
-plotSimpleConfusionMatrix(targetTest, y_pred)
-print("Balanced Accuracy: ", balanced_accuracy_score(targetTest, y_pred))
-print("Precision: ", precision_score(targetTest, y_pred, pos_label=1))
+plotSimpleConfusionMatrix(targetTestClass, predictedClassBinary)
+print("Balanced Accuracy: ", balanced_accuracy_score(targetTestClass, predictedClassBinary))
+print("Precision: ", precision_score(targetTestClass, predictedClassBinary, pos_label=1))
 
 
 plot_loss(resultRegression)
+
 predictedRegression = regressionModel.predict(inputTest)
 scatterPlot(targetTestRegression, predictedRegression)
-print("Mean Absolute Error: ", mean_absolute_error(targetTestRegression, predictedRegression))
-print("Pearson Correlation Coefficient: ", r_regression(predictedRegression, targetTestRegression))
+print("Mean Absolute Error: ", mean_absolute_error(
+    targetTestRegression, predictedRegression))
+print("Pearson Correlation Coefficient: ", r_regression(
+    predictedRegression, targetTestRegression))
 
-#evaluate_performance(y_test, y_pred)
 
 initClassModel.save("classification4.keras")
 regressionModel.save("regression.keras")
-
-
 classificationModel = keras.models.load_model("classification4.keras")
-
-
-
 regressionModelLoaded = keras.models.load_model("regression.keras")
 
 
-#might need to change file name during discussion
+# might need to change file name during discussion
 with open('Fake_Climate_SPI6.csv', newline='') as csvfile:
     data = list(csv.reader(csvfile))
 
 data = drought(data)
-
 checkNonFloatNonNP(data)
-
 random.Random(seed).shuffle(data)
 
 data = np.array(data)
-
-
 data = data.astype(float)
-
-
 data = removeOutliers(data, forbiddenColumns)
 data = filterInvalidMonthsNP(data)
 data = noIncludeInfinites(data)
 data = normaliseMonth(data)
-data = filterInvalidMonthsNP(data)
-
-
 
 
 dataInput = data[:, inputColumns]
 dataTargetClassification = data[:, 16]
 dataTargetRegression = data[:, 14]
+
 scaler = MinMaxScaler()
 scaler.fit(dataInput)
 dataInputNormalized = scaler.transform(dataInput)
 
-
 nClassificationPredicted = classificationModel.predict(dataInputNormalized)
+nClassificationPredBin = (nClassificationPredicted >= 0.5).astype("int32")
 
-
-nClassificationPredBin = (nClassificationPredicted >= 0.5).astype("int32")  # Adjust this line if your model outputs class labels directly
-
-
-
-countRealDroughtClassification = 0
-for x in dataTargetClassification:
-    if x == 1:
-        countRealDroughtClassification += 1
-print(countRealDroughtClassification)
-
-countPredictedDroughtClassification = 0
-for x in nClassificationPredBin:
-    if x == 1:
-        countPredictedDroughtClassification += 1
-print(countPredictedDroughtClassification)
 
 plotSimpleConfusionMatrix(dataTargetClassification, nClassificationPredBin)
-print("Balanced Accuracy: ", balanced_accuracy_score(dataTargetClassification, nClassificationPredBin))
-print("Precision: ", precision_score(dataTargetClassification, nClassificationPredBin, pos_label=1))
-
-#Print the number of samples and your model’s predictors set.
+print("Balanced Accuracy: ", balanced_accuracy_score(
+    dataTargetClassification, nClassificationPredBin))
+print("Precision: ", precision_score(
+    dataTargetClassification, nClassificationPredBin, pos_label=1))
 print("Number of samples: ", len(data))
 printPredictorsSet(variables, inputColumns)
+
 
 nRegressionPredicted = regressionModelLoaded.predict(dataInputNormalized)
+
 scatterPlot(dataTargetRegression, nRegressionPredicted)
-print("Mean Absolute Error: ", mean_absolute_error(dataTargetRegression, nRegressionPredicted))
-print("Pearson Correlation Coefficient: ", r_regression(nRegressionPredicted, dataTargetRegression))
+print("Mean Absolute Error: ", mean_absolute_error(
+    dataTargetRegression, nRegressionPredicted))
+print("Pearson Correlation Coefficient: ", r_regression(
+    nRegressionPredicted, dataTargetRegression))
 print("Number of samples: ", len(data))
 printPredictorsSet(variables, inputColumns)
-
-'''
-# define the keras model
-model = Sequential()
-model.add(Dense(500, input_shape=(13,), activation='relu'))
-model.add(Dense(100, activation='relu'))
-model.add(Dense(1, activation='sigmoid'))
-# compile the keras model
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-# fit the keras model on the dataset
-result = model.fit(input, target, epochs=250, batch_size=100, validation_data=(inputVal, targetVal))
-# evaluate the keras model
-_, accuracy = model.evaluate(input, target)
-print('Accuracy: %.2f' % (accuracy*100))
-
-_, accuracyVal = model.evaluate(inputVal, targetVal)
-print('Accuracy: %.2f' % (accuracyVal*100))
-
-#Plot of the accuracy (y-axis) versus the number of epochs (x-axis) for both the training and validation sets
-
-
-
-
-
-test_input = test_data[:, inputColumns]
-
-#Performance metrics “Balanced Accuracy” and “Precision” calculated on the test set.
-
-# Predict the class on the test set
-y_pred = model.predict(test_input)
-y_test = test_data[:, 16]
-
-#print(y_pred)
-#print(y_test)
-y_pred = (y_pred > 0.5).astype("int32")  # Adjust this line if your model outputs class labels directly
-
-# Evaluate the performance
-#evaluate_performance(y_test, y_pred)
-
-# Compute and plot the confusion matrix
-class_names = ['No Drought', 'Drought']  # Adjust class names as needed
-plot_confusion_matrix(y_test, y_pred, class_names)
-
-
-evaluate_performance(y_test, y_pred)
-
-plot_accuracy(result)
-
-
-#print(lineCount(train_data)+lineCount(val_data)+lineCount(test_data))   
-
-'''
-
-#print row of each
-#print(train_data[0])
-
-#print data type of each single val
-#print(type(train_data[2][3]))
-#(c) Pre-processing: Apply any necessary transformation to the trainingset, then apply the same transformation to the validation and test sets.
-#convert data to float
-
-#print(train_data[0])
-#check for any empty values and non numeric values in a row and delete the row 
-
-'''
-def check_empty_values(data):
-    
-    
-check_empty_values(train_data)
-check_empty_values(val_data)    
-check_empty_values(test_data)
-'''
-#– Normalise the month to the range [0, 2π] using: month normalised = 2π× (month - 1)/12., 
-# replace ’month’ with two new predictors: ‘cos(month normalised)’ and ‘sin(month normalised)’.
-#Data [['year', 'month', 'u10', 'v10', 'mx2t', 'mn2t', 'tcc', 't2', 'msl', 't', 'q', 'u', 'v', 'z', 'SPI', 'grid_ID','Drought', 'cosMonthNorm', 'sinMonthNorm],...]
-
-
-#print(train_data[0])
-
-#train_data = normaliseMonth(train_data)
-#val_data = normaliseMonth(val_data)
-#test_data = normaliseMonth(test_data)
-#print(type(train_data[0][0]))
-#print(train_data[0])
-
-
-
-

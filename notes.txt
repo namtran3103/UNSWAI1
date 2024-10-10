@@ -11,3 +11,4 @@ https://stackoverflow.com/questions/44747343/keras-input-explanation-input-shape
 anderen threshold probieren
 specific humidity, both temps, total cloud dover, wind components
 
+#numpy stretching and slicing  
