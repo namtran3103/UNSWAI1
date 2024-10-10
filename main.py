@@ -169,8 +169,8 @@ def printPredictorsSet(variables, indices):
     print("Used predictors: ", usedPredictors)
 
 
-with open('Climate_SPI_Init.csv', newline='') as csvfile:
-    initData = list(csv.reader(csvfile))
+with open('Climate_SPI_Init.csv', newline='') as csvfileUnseen:
+    initData = list(csv.reader(csvfileUnseen))
 
 initData = drought(initData)
 checkNonFloatNonNP(initData)
@@ -216,29 +216,20 @@ targetTestRegression = dataTargetRegression[int(0.85*len(initData)):]
 
 
 initClassModel = Sequential()
-# basic_model.add(Dense(units=16, activation='relu', input_shape=(13,)))
-initClassModel.add(Dense(50, activation='relu', input_dim=14))
+initClassModel.add(Dense(80, activation='relu', input_dim=14))
 initClassModel.add(Dense(1, activation='sigmoid'))
 
 adam = keras.optimizers.Adam(learning_rate=0.001)
-initClassModel.compile(loss='binary_crossentropy',
-                       optimizer=adam, metrics=["accuracy"])
-resultClass = initClassModel.fit(inputTrain, targetTrainClass, epochs=150, batch_size=32, validation_data=(
-    inputVal, targetValClass))  # used 150
-
+initClassModel.compile(loss='binary_crossentropy', optimizer=adam, metrics=["accuracy"])
+resultClass = initClassModel.fit(inputTrain, targetTrainClass, epochs=200, batch_size=64, validation_data=(inputVal, targetValClass))
 
 adamReg = keras.optimizers.Adam(learning_rate=0.001)
 regressionModel = Sequential()
-# regressionModel.add(Dense(450, activation='relu', input_dim=13))
-# regressionModel.add(Dense(90, activation= "relu"))
-# regressionModel.add(Dense(45, activation= "relu"))
-regressionModel.add(Dense(50, activation="relu", input_dim=14))
+
+regressionModel.add(Dense(80, activation="relu", input_dim=14))
 regressionModel.add(Dense(1))
-regressionModel.compile(loss='mean_squared_error',
-                        optimizer=adamReg, metrics=["mean_squared_error"])
-resultRegression = regressionModel.fit(inputTrain, targetRegression, epochs=220,
-                                       # used 220
-                                       batch_size=32, validation_data=(inputVal, targetValRegression))
+regressionModel.compile(loss='mean_squared_error', optimizer=adamReg, metrics=["mean_squared_error"])
+resultRegression = regressionModel.fit(inputTrain, targetRegression, epochs=100, batch_size=64, validation_data=(inputVal, targetValRegression))
 
 plot_accuracy(resultClass)
 
@@ -270,12 +261,12 @@ regressionModelLoaded = keras.models.load_model("regression.keras")
 
 
 # might need to change file name during discussion
-with open('Fake_Climate_SPI6.csv', newline='') as csvfile:
-    data = list(csv.reader(csvfile))
+with open('Fake_Climate_SPI6.csv', newline='') as csvfileUnseen:
+    data = list(csv.reader(csvfileUnseen))
 
 data = drought(data)
 checkNonFloatNonNP(data)
-random.Random(seed).shuffle(data)
+#random.Random(seed).shuffle(data)
 
 data = np.array(data)
 data = data.astype(float)
