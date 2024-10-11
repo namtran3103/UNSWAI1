@@ -12,3 +12,4 @@ anderen threshold probieren
 specific humidity, both temps, total cloud dover, wind components
 
 #numpy stretching and slicing  
+#plt.ylim(0.8, 0.9)

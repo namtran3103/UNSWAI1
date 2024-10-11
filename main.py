@@ -58,13 +58,6 @@ def filterInvalidMonthsNP(data):
     return np.array(new_data)
 
 
-def lineCount(data):
-    count = 0
-    for x in data:
-        count += 1
-    return count
-
-
 def normaliseMonth(dataSet):
     new_dataSet = []
     for x in dataSet:
@@ -183,6 +176,7 @@ initData = filterInvalidMonthsNP(initData)
 initData = noIncludeInfinites(initData)
 initData = normaliseMonth(initData)
 
+#3h, 4g, testing different subsets of predictors
 # inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18]
 # inputColumns = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18]
 # inputColumns = [2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
@@ -222,6 +216,8 @@ initClassModel.add(Dense(1, activation='sigmoid'))
 adam = keras.optimizers.Adam(learning_rate=0.001)
 initClassModel.compile(loss='binary_crossentropy', optimizer=adam, metrics=["accuracy"])
 resultClass = initClassModel.fit(inputTrain, targetTrainClass, epochs=200, batch_size=64, validation_data=(inputVal, targetValClass))
+plot_accuracy(resultClass)
+
 
 adamReg = keras.optimizers.Adam(learning_rate=0.001)
 regressionModel = Sequential()
@@ -230,12 +226,12 @@ regressionModel.add(Dense(80, activation="relu", input_dim=14))
 regressionModel.add(Dense(1))
 regressionModel.compile(loss='mean_squared_error', optimizer=adamReg, metrics=["mean_squared_error"])
 resultRegression = regressionModel.fit(inputTrain, targetRegression, epochs=100, batch_size=64, validation_data=(inputVal, targetValRegression))
+plot_loss(resultRegression)
 
-plot_accuracy(resultClass)
+
 
 predictedClass = initClassModel.predict(inputTest)
 
-# Adjust this line if your model outputs class labels directly
 predictedClassBinary = (predictedClass >= 0.5).astype("int32")
 
 
@@ -244,7 +240,7 @@ print("Balanced Accuracy: ", balanced_accuracy_score(targetTestClass, predictedC
 print("Precision: ", precision_score(targetTestClass, predictedClassBinary, pos_label=1))
 
 
-plot_loss(resultRegression)
+
 
 predictedRegression = regressionModel.predict(inputTest)
 scatterPlot(targetTestRegression, predictedRegression)
@@ -266,7 +262,6 @@ with open('Fake_Climate_SPI6.csv', newline='') as csvfileUnseen:
 
 data = drought(data)
 checkNonFloatNonNP(data)
-#random.Random(seed).shuffle(data)
 
 data = np.array(data)
 data = data.astype(float)
